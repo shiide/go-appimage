@@ -14,6 +14,7 @@ import (
 	"github.com/adrg/xdg"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/prometheus/procfs"
+	"github.com/samber/lo"
 
 	"github.com/probonopd/go-appimage/internal/helpers"
 )
@@ -78,18 +79,22 @@ var commit string
 var watchedDirectories []string
 
 var home, _ = os.UserHomeDir()
-var candidateDirectories = append(
-	strings.Split(os.Getenv("PATH"), ":"),
-	[]string{
-		xdg.UserDirs.Download,
-		xdg.UserDirs.Desktop,
-		home + "/.local/bin",
-		home + "/bin",
-		home + "/Applications",
-		"/opt",
-		"/usr/local/bin",
-	}...,
-)
+var candidateDirectories = buildCandidateDirectoryList()
+
+func buildCandidateDirectoryList() []string {
+	return lo.Uniq(append(
+		strings.Split(os.Getenv("PATH"), ":"),
+		[]string{
+			xdg.UserDirs.Download,
+			xdg.UserDirs.Desktop,
+			home + "/.local/bin",
+			home + "/bin",
+			home + "/Applications",
+			"/opt",
+			"/usr/local/bin",
+		}...,
+	))
+}
 
 func main() {
 	thisai, _ = NewAppImage(helpers.Args0())

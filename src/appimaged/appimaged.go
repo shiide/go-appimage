@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	mqttEnabled = false
+	mqttEnabled           = false
+	fullWatchDirectorySet = false
 )
 
 // TODO: Understand whether we can make clever use of
@@ -83,17 +84,41 @@ var candidateDirectories = buildCandidateDirectoryList()
 
 func buildCandidateDirectoryList() []string {
 	return lo.Uniq(append(
-		strings.Split(os.Getenv("PATH"), ":"),
+		getDirectoriesOnPath(),
+		getWatchDirectories()...,
+	))
+}
+
+func getDirectoriesOnPath() []string {
+	return strings.Split(os.Getenv("PATH"), ":")
+}
+
+func getWatchDirectories() []string {
+	if fullWatchDirectorySet {
+		return getFullWatchDirectories()
+	} else {
+		return getMinimalWatchDirectories()
+	}
+}
+
+func getMinimalWatchDirectories() []string {
+	return []string{
+		home + "/.local/bin",
+		home + "/bin",
+		home + "/Applications",
+	}
+}
+
+func getFullWatchDirectories() []string {
+	return append(
+		getMinimalWatchDirectories(),
 		[]string{
 			xdg.UserDirs.Download,
 			xdg.UserDirs.Desktop,
-			home + "/.local/bin",
-			home + "/bin",
-			home + "/Applications",
 			"/opt",
 			"/usr/local/bin",
 		}...,
-	))
+	)
 }
 
 func main() {

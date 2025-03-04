@@ -18,6 +18,10 @@ import (
 	"github.com/probonopd/go-appimage/internal/helpers"
 )
 
+const (
+	mqttEnabled = false
+)
+
 // TODO: Understand whether we can make clever use of
 // org.freedesktop.thumbnails.Thumbnailer1 dbus
 // rather than (or in addition to) using inotify at all
@@ -140,7 +144,7 @@ func main() {
 	// overwritePtr = &ptrue
 
 	// Connect to MQTT server and subscribe to the topic for ourselves
-	if CheckIfConnectedToNetwork() {
+	if mqttEnabled && CheckIfConnectedToNetwork() {
 		uri, err := url.Parse(helpers.MQTTServerURI)
 		if err != nil {
 			log.Fatal(err)
@@ -221,18 +225,20 @@ func main() {
 	// still connected; try to reconnect if it is not.
 	// This is recommended by MQTT servers since they can go
 	// down for maintenance
-	ticker2 := time.NewTicker(120 * time.Second)
-	go func() {
-		for {
-			select {
-			case <-ticker2.C:
-				checkMQTTConnected(MQTTclient)
-			case <-quit:
-				ticker2.Stop()
-				return
+	if mqttEnabled {
+		ticker2 := time.NewTicker(120 * time.Second)
+		go func() {
+			for {
+				select {
+				case <-ticker2.C:
+					checkMQTTConnected(MQTTclient)
+				case <-quit:
+					ticker2.Stop()
+					return
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	<-quit
 

@@ -14,12 +14,14 @@ import (
 	"github.com/adrg/xdg"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/prometheus/procfs"
+	"github.com/samber/lo"
 
 	"github.com/probonopd/go-appimage/internal/helpers"
 )
 
 const (
-	mqttEnabled = false
+	mqttEnabled           = false
+	fullWatchDirectorySet = false
 )
 
 // TODO: Understand whether we can make clever use of
@@ -78,18 +80,46 @@ var commit string
 var watchedDirectories []string
 
 var home, _ = os.UserHomeDir()
-var candidateDirectories = append(
-	strings.Split(os.Getenv("PATH"), ":"),
-	[]string{
-		xdg.UserDirs.Download,
-		xdg.UserDirs.Desktop,
+var candidateDirectories = buildCandidateDirectoryList()
+
+func buildCandidateDirectoryList() []string {
+	return lo.Uniq(append(
+		getDirectoriesOnPath(),
+		getWatchDirectories()...,
+	))
+}
+
+func getDirectoriesOnPath() []string {
+	return strings.Split(os.Getenv("PATH"), ":")
+}
+
+func getWatchDirectories() []string {
+	if fullWatchDirectorySet {
+		return getFullWatchDirectories()
+	} else {
+		return getMinimalWatchDirectories()
+	}
+}
+
+func getMinimalWatchDirectories() []string {
+	return []string{
 		home + "/.local/bin",
 		home + "/bin",
 		home + "/Applications",
-		"/opt",
-		"/usr/local/bin",
-	}...,
-)
+	}
+}
+
+func getFullWatchDirectories() []string {
+	return append(
+		getMinimalWatchDirectories(),
+		[]string{
+			xdg.UserDirs.Download,
+			xdg.UserDirs.Desktop,
+			"/opt",
+			"/usr/local/bin",
+		}...,
+	)
+}
 
 func main() {
 	thisai, _ = NewAppImage(helpers.Args0())

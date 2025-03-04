@@ -117,10 +117,6 @@ func (ai AppImage) _integrate() error {
 				diff := desktopFileInfo.ModTime().Sub(appImageInfo.ModTime())
 				if diff > (time.Duration(0) * time.Second) {
 					// Do nothing if the desktop file is already newer than the AppImage file
-					// but subscribe
-					if mqttEnabled && CheckIfConnectedToNetwork() {
-						go SubscribeMQTT(MQTTclient, ai.updateinformation)
-					}
 					return nil
 				}
 			}
@@ -137,13 +133,6 @@ func (ai AppImage) _integrate() error {
 	err := writeDesktopFile(ai) // Do not run with "go" as it would interfere with extractDirIconAsThumbnail
 	if err != nil {
 		return err
-	}
-
-	// Subscribe to MQTT messages for this application
-	if mqttEnabled && ai.updateinformation != "" {
-		if CheckIfConnectedToNetwork() {
-			go SubscribeMQTT(MQTTclient, ai.updateinformation)
-		}
 	}
 
 	// SimpleNotify(ai.path, "Integrated", 3000)
@@ -173,11 +162,6 @@ func (ai AppImage) _unintegrate() {
 	log.Println("appimage: Remove integration", ai.Path)
 	os.Remove(ai.thumbnailfilepath)
 	os.Remove(ai.desktopfilepath)
-	// Unsubscribe to MQTT messages for this application
-	if mqttEnabled && ai.updateinformation != "" {
-		go UnSubscribeMQTT(MQTTclient, ai.updateinformation)
-	}
-
 }
 
 // IntegrateOrUnintegrate integrates or unintegrates

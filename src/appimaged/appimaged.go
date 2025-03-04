@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,14 +11,9 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/prometheus/procfs"
 
 	"github.com/probonopd/go-appimage/internal/helpers"
-)
-
-const (
-	mqttEnabled = false
 )
 
 // TODO: Understand whether we can make clever use of
@@ -53,8 +47,6 @@ var quietPtr = flag.Bool("q", false, "Do not send desktop notifications")
 var updateChannel chan struct{} = make(chan struct{}, 10)
 
 var thisai *AppImage // A reference to myself
-
-var MQTTclient mqtt.Client
 
 // To keep track of what we already have subscribed. Something like this is needed in order
 // not to be flooded with messages.
@@ -143,21 +135,6 @@ func main() {
 	// ptrue := true // Nasty trick from https://code-review.googlesource.com/c/gocloud/+/26730/3/bigquery/query.go
 	// overwritePtr = &ptrue
 
-	// Connect to MQTT server and subscribe to the topic for ourselves
-	if mqttEnabled && CheckIfConnectedToNetwork() {
-		uri, err := url.Parse(helpers.MQTTServerURI)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// go SubscribeMQTT(MQTTclient, "gh-releases-zsync|probonopd|merkaartor|continuous|Merkaartor-*-x86_64.AppImage.zsync")
-		// go SubscribeMQTT(MQTTclient, "gh-releases-zsync|AppImage|AppImageKit|continuous|appimagetool-x86_64.AppImage.zsync")
-
-		MQTTclient = connect("sub", uri)
-		log.Println("MQTT client connected:", MQTTclient.IsConnected())
-
-	}
-
 	// go monitorDbusSessionBus() // If used, then nothing else can use DBus anymore? FIXME #####################
 
 	// SimpleNotify("Starting", helpers.Here(), 5000)
@@ -220,46 +197,8 @@ func main() {
 	// React to partitions being mounted and unmounted
 	go monitorUdisks()
 
-	// Ticker to periodically check whether MQTT is still connected.
-	// Periodically check whether the MQTT client is
-	// still connected; try to reconnect if it is not.
-	// This is recommended by MQTT servers since they can go
-	// down for maintenance
-	if mqttEnabled {
-		ticker2 := time.NewTicker(120 * time.Second)
-		go func() {
-			for {
-				select {
-				case <-ticker2.C:
-					checkMQTTConnected(MQTTclient)
-				case <-quit:
-					ticker2.Stop()
-					return
-				}
-			}
-		}()
-	}
-
 	<-quit
 
-}
-
-// checkMQTTConnected checks whether the MQTT client is
-// still connected; try to reconnect if it is not.
-// This is recommended by MQTT servers since they can go
-// down for maintenance
-func checkMQTTConnected(MQTTclient mqtt.Client) {
-	if CheckIfConnectedToNetwork() {
-		if !MQTTclient.IsConnected() {
-			log.Println("MQTT client connected:", MQTTclient.IsConnected())
-			MQTTclient.Connect()
-			log.Println("MQTT client connected:", MQTTclient.IsConnected())
-			// TODO: Do we need to subscribe everything again when this happens?
-			// Not if we use a persistent session, see
-			// https://www.hivemq.com/blog/mqtt-essentials-part-7-persistent-session-queuing-messages/
-			// TODO: use a persistent session with the appropriate quality of service level
-		}
-	}
 }
 
 // Periodically update the application menu so that the menu does not get rebuilt all the time

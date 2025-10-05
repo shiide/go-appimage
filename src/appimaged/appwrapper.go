@@ -34,7 +34,9 @@ func appwrap() {
 
 	// Find desktop file(s) that point to the executable in os.Args[2],
 	// and check them with desktop-file-verify; display notification if verification fails
-	go checkDesktopFiles(os.Args[2])
+	if desktopFileValidationEnabled {
+		go checkDesktopFiles(os.Args[2])
+	}
 
 	ai, err := NewAppImage(os.Args[2])
 

@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	mqttEnabled           = false
-	fullWatchDirectorySet = false
+	mqttEnabled                  = false
+	fullWatchDirectorySet        = false
+	desktopFileValidationEnabled = false
 )
 
 // TODO: Understand whether we can make clever use of
